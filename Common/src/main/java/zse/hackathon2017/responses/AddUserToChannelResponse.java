@@ -5,6 +5,6 @@ import zse.hackathon2017.Response;
 /**
  * Created by Grzechu on 25.03.2017.
  */
-public class AddChannelToGroupResponse implements Response {
+public class AddUserToChannelResponse implements Response {
     public boolean success;
 }
