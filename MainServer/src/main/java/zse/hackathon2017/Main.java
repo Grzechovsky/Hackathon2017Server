@@ -26,6 +26,7 @@ public class Main {
 
         ExecutorService executorService = Executors.newFixedThreadPool(4);
         ExecutorService executorService2 = Executors.newFixedThreadPool(4);
+        ExecutorService executorService3 = Executors.newFixedThreadPool(4);
 
         Connection dbConn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/hackathon2017", "postgres", "123456");
 
@@ -33,6 +34,7 @@ public class Main {
         server.main = channel;
         server.receiveThreads = executorService;
         server.processThreads = executorService2;
+        server.transerThreads = executorService3;
         server.dbConn = dbConn;
 
         Selector selector = Selector.open();

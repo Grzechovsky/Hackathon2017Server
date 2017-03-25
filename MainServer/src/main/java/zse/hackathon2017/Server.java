@@ -17,5 +17,6 @@ public class Server {
     public ExecutorService processThreads = null;
     public Connection dbConn;
     public Queue<Outgoing> outgoingQueue = new ConcurrentLinkedQueue<>();
+    public ExecutorService transerThreads = null;
 
 }

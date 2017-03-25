@@ -6,6 +6,8 @@ import zse.hackathon2017.responses.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -35,7 +37,7 @@ public class ProcessWorker implements Runnable {
     @Override
     public void run() {
         Response response = null;
-
+        System.out.println("MESSAGE " + segment.message);
         if (segment.message instanceof RegisterMessage) {
             RegisterMessage register = (RegisterMessage) segment.message;
 
@@ -77,7 +79,7 @@ public class ProcessWorker implements Runnable {
 
         if (segment.message instanceof CreateChannelMessage) {
             CreateChannelMessage createGroup = (CreateChannelMessage) segment.message;
-
+            System.out.println("CreateChannelMessage !!!");
             CreateChannelResponse r = new CreateChannelResponse();
 //
             try {
@@ -186,6 +188,26 @@ public class ProcessWorker implements Runnable {
             }
 
             response = r;
+        }
+
+        if (segment.message instanceof AddImageMessage) {
+            AddImageMessage addImage = (AddImageMessage) segment.message;
+            AddImageResponse r = new AddImageResponse();
+
+            try {
+                ServerSocket serverSocket = new ServerSocket(0);
+                server.transerThreads.submit(new ReceiveImageWorker(server, serverSocket, segment.token, addImage.channelName));
+                r.socketAddress = new InetSocketAddress("192.168.0.100", serverSocket.getLocalPort());
+            } catch (IOException e) {
+                r.socketAddress = null;
+                e.printStackTrace();
+            }
+
+            response = r;
+        }
+
+        if (segment.message instanceof GetImageMessage) {
+            
         }
 
         if (response != null) {
