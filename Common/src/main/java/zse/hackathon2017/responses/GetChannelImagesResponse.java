@@ -13,6 +13,12 @@ public class GetChannelImagesResponse implements Response {
 
     public static class ChannelImage implements Serializable {
         public int imageId;
+
+        public ChannelImage(int imageId, String username) {
+            this.imageId = imageId;
+            this.username = username;
+        }
+
         public String username;
     }
 }

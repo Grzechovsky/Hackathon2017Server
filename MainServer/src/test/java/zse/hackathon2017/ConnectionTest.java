@@ -2,8 +2,10 @@ package zse.hackathon2017;
 
 import org.junit.Assert;
 import org.junit.Test;
+import zse.hackathon2017.messages.GetChannelImagesMessage;
 import zse.hackathon2017.messages.GetUserChannelsMessage;
 import zse.hackathon2017.messages.LoginMessage;
+import zse.hackathon2017.responses.GetChannelImagesResponse;
 import zse.hackathon2017.responses.GetUserChannelsResponse;
 import zse.hackathon2017.responses.LoginResponse;
 
@@ -13,11 +15,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
+import static zse.hackathon2017.responses.GetChannelImagesResponse.*;
+
 /**
  * Created by Grzechu on 25.03.2017.
  */
 public class ConnectionTest {
-
 
 
     @Test
@@ -58,6 +61,19 @@ public class ConnectionTest {
 
         GetUserChannelsResponse getUserChannelsResponse = (GetUserChannelsResponse) receive(socket);
         System.out.println(Arrays.toString(getUserChannelsResponse.channelNames));
+
+        for (String channelName : getUserChannelsResponse.channelNames) {
+            GetChannelImagesMessage getChannelImagesMessage = new GetChannelImagesMessage();
+            getChannelImagesMessage.channelName = channelName;
+
+            segment.message = getChannelImagesMessage;
+            send(socket, segment);
+
+            GetChannelImagesResponse response = (GetChannelImagesResponse) receive(socket);
+            for (ChannelImage image : response.images) {
+                System.out.println(channelName + " - " + image.imageId + " - " + image.username);
+            }
+        }
 
 //        CreateChannelMessage createGroup = new CreateChannelMessage();
 //        createGroup.name = "test_group";

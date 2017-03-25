@@ -2,6 +2,7 @@ package zse.hackathon2017;
 
 import zse.hackathon2017.messages.*;
 import zse.hackathon2017.responses.*;
+import zse.hackathon2017.responses.GetChannelImagesResponse.ChannelImage;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -167,27 +168,25 @@ public class ProcessWorker implements Runnable {
 
             try {
                 PreparedStatement stmt = server.dbConn.prepareStatement(
-                        "SELECT id" +
+                        "SELECT images.id, username " +
                             "FROM images " +
-                            "WHERE channel_id = (" +
-                                "SELECT id " +
-                                "FROM channels " +
-                                "WHERE name = ?" +
-                            ") " +
+                            "INNER JOIN users " +
+                            "ON users.id = sender " +
+                            "WHERE channel_id = (SELECT id FROM channels WHERE name = ?) " +
                             "ORDER BY id DESC;"
                 );
                 stmt.setString(1, getChannelImages.channelName);
 
                 ResultSet resultSet = stmt.executeQuery();
-                Set<Integer> ids = new HashSet<>();
+                Set<ChannelImage> ids = new HashSet<>();
 
                 while (resultSet.next()) {
-                    ids.add(resultSet.getInt(1));
+                    ids.add(new ChannelImage(resultSet.getInt(1), resultSet.getString(2)));
                 }
 
-                r.imageIds = ids.stream().mapToInt(Integer::intValue).toArray();
+                r.images = ids.toArray(new ChannelImage[ids.size()]);
             } catch (SQLException e) {
-                r.imageIds = null;
+                r.images = null;
                 e.printStackTrace();
             }
 
