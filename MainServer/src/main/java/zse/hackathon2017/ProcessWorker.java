@@ -2,12 +2,20 @@ package zse.hackathon2017;
 
 import zse.hackathon2017.messages.LoginMessage;
 import zse.hackathon2017.messages.RegisterMessage;
+import zse.hackathon2017.responses.LoginResponse;
+import zse.hackathon2017.responses.RegisterResponse;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.util.UUID;
 
 /**
  * Created by Grzechu on 25.03.2017.
@@ -16,14 +24,18 @@ public class ProcessWorker implements Runnable {
 
     private Server server;
     private Segment segment;
+    private SocketAddress respondTo;
 
-    public ProcessWorker(Server server, Segment segment) {
+    public ProcessWorker(Server server, Segment segment, SocketAddress respondTo) {
         this.server = server;
         this.segment = segment;
+        this.respondTo = respondTo;
     }
 
     @Override
     public void run() {
+        Response response = null;
+
         if (segment.message instanceof RegisterMessage) {
             RegisterMessage register = (RegisterMessage) segment.message;
 
@@ -40,6 +52,32 @@ public class ProcessWorker implements Runnable {
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+
+
+
+            try {
+                PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO tokens (user_id, token, expires) VALUES ((SELECT id FROM users WHERE username = ? AND password = ?), uuid_generate_v4(), now() + interval '1 day') RETURNING token;");
+                stmt.setString(1, register.username);
+                stmt.setBytes(2, salt(register.password));
+
+                RegisterResponse res = new RegisterResponse();
+
+                try {
+                    ResultSet resultSet = stmt.executeQuery();
+                    resultSet.next();
+                    res.successful = true;
+                    res.token = UUID.fromString(resultSet.getString(1));
+                } catch (SQLException ex) {
+                    res.successful = false;
+                    res.token = null;
+                }
+
+                response = res;
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+
         }
         if (segment.message instanceof LoginMessage) {
             LoginMessage login = (LoginMessage) segment.message;
@@ -50,15 +88,40 @@ public class ProcessWorker implements Runnable {
             }
 
             try {
-                PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO tokens (user_id, token, expires) VALUES ((SELECT id FROM users WHERE username = ?, password = ?), uuid_generate_v4(), );");
+                PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO tokens (user_id, token, expires) VALUES ((SELECT id FROM users WHERE username = ? AND password = ?), uuid_generate_v4(), now() + interval '1 day') RETURNING token;");
                 stmt.setString(1, login.username);
                 stmt.setBytes(2, salt(login.password));
-                stmt.executeUpdate();
 
+                LoginResponse res = new LoginResponse();
+
+                try {
+                    ResultSet resultSet = stmt.executeQuery();
+                    resultSet.next();
+                    res.successful = true;
+                    res.token = UUID.fromString(resultSet.getString(1));
+                } catch (SQLException ex) {
+                    res.successful = false;
+                    res.token = null;
+                }
+
+                response = res;
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        }
 
+        if (response != null) {
+            try {
+                ByteArrayOutputStream buff = new ByteArrayOutputStream();
+                ObjectOutputStream out = new ObjectOutputStream(buff);
+                out.writeObject(response);
+
+                Outgoing outgoing = new Outgoing();
+                outgoing.respondTo = respondTo;
+                outgoing.response = ByteBuffer.wrap(buff.toByteArray());
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
         }
     }
 

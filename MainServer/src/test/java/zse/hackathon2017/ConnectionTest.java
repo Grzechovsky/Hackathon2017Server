@@ -10,6 +10,7 @@ import java.io.ObjectOutputStream;
 import java.net.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.UUID;
 
 /**
  * Created by Grzechu on 25.03.2017.
@@ -23,12 +24,18 @@ public class ConnectionTest {
 
         byte[] digest = MessageDigest.getInstance("SHA-256").digest("LOLLOL".getBytes());
 
-        RegisterMessage registerMessage = new RegisterMessage();
-        registerMessage.username = "LOLOL";
-        registerMessage.password = digest;
         Segment segment = new Segment();
-        segment.sender = null;
-        segment.message = registerMessage;
+        segment.token = UUID.randomUUID();
+
+//        RegisterMessage registerMessage = new RegisterMessage();
+//        registerMessage.username = "LOLOL";
+//        registerMessage.password = digest;
+//        segment.message = registerMessage;
+
+        LoginMessage loginMessage = new LoginMessage();
+        loginMessage.username = "LOLOL";
+        loginMessage.password = digest;
+        segment.message = loginMessage;
 
         ByteArrayOutputStream array = new ByteArrayOutputStream();
         ObjectOutputStream out = new ObjectOutputStream(array);

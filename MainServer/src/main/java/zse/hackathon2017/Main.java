@@ -45,6 +45,17 @@ public class Main {
             if (key.isReadable()) {
                 executorService.submit(new ReceiveWorker(key));
             }
+
+            if (!server.outgoingQueue.isEmpty()) {
+                key = channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+            }
+
+            if (key.isWritable()) {
+                while (!server.outgoingQueue.isEmpty()) {
+                    Outgoing outgoing = server.outgoingQueue.poll();
+                    channel.send(outgoing.response, outgoing.respondTo);
+                }
+            }
         }
 
     }
