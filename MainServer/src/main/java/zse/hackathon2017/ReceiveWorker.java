@@ -36,7 +36,7 @@ public class ReceiveWorker implements Runnable {
             if (addr == null) {
                 return;
             }
-
+            System.out.println("INCOMING DATA");
             ByteArrayInputStream input = new ByteArrayInputStream(buffer.array(), 0, buffer.position() + 1);
             ObjectInputStream objectInput = new ObjectInputStream(input);
             Object o = objectInput.readObject();

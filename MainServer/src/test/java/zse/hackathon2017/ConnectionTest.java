@@ -4,6 +4,7 @@ import org.junit.Test;
 import zse.hackathon2017.messages.LoginMessage;
 import zse.hackathon2017.messages.RegisterMessage;
 import zse.hackathon2017.responses.LoginResponse;
+import zse.hackathon2017.responses.RegisterResponse;
 
 import java.io.*;
 import java.net.*;
@@ -53,9 +54,9 @@ public class ConnectionTest {
             throw new RuntimeException();
         }
 
-        if (o instanceof LoginResponse) {
-            System.out.println(((LoginResponse) o).successful);
-            System.out.println(((LoginResponse) o).token);
+        if (o instanceof RegisterResponse) {
+            System.out.println(((RegisterResponse) o).successful);
+            System.out.println(((RegisterResponse) o).token);
         }
 
     }

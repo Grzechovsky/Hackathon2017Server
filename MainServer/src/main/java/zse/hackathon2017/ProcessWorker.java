@@ -1,7 +1,10 @@
 package zse.hackathon2017;
 
+import zse.hackathon2017.messages.AddUserToGroupMessage;
+import zse.hackathon2017.messages.CreateGroupMessage;
 import zse.hackathon2017.messages.LoginMessage;
 import zse.hackathon2017.messages.RegisterMessage;
+import zse.hackathon2017.responses.CreateGroupResponse;
 import zse.hackathon2017.responses.LoginResponse;
 import zse.hackathon2017.responses.RegisterResponse;
 
@@ -44,41 +47,28 @@ public class ProcessWorker implements Runnable {
                 return;
             }
 
+            final byte[] salted = salt(register.password);
             try {
                 PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO users (username, password) VALUES (?, ?)");
                 stmt.setString(1, register.username);
-                stmt.setBytes(2, salt(register.password));
+                stmt.setBytes(2, salted);
                 stmt.execute();
-            } catch (SQLException e) {
+
+                RegisterResponse r = new RegisterResponse();
+                r = new RegisterResponse();
+                r.token = createNewToken(register.username, salted);
+                r.successful = r.token != null;
+                response = r;
+            } catch (Exception e) {
                 e.printStackTrace();
+                RegisterResponse r = new RegisterResponse();
+                r = new RegisterResponse();
+                r.token = null;
+                r.successful = false;
+                response = r;
             }
-
-
-
-            try {
-                PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO tokens (user_id, token, expires) VALUES ((SELECT id FROM users WHERE username = ? AND password = ?), uuid_generate_v4(), now() + interval '1 day') RETURNING token;");
-                stmt.setString(1, register.username);
-                stmt.setBytes(2, salt(register.password));
-
-                RegisterResponse res = new RegisterResponse();
-
-                try {
-                    ResultSet resultSet = stmt.executeQuery();
-                    resultSet.next();
-                    res.successful = true;
-                    res.token = UUID.fromString(resultSet.getString(1));
-                } catch (SQLException ex) {
-                    res.successful = false;
-                    res.token = null;
-                }
-
-                response = res;
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-
-
         }
+
         if (segment.message instanceof LoginMessage) {
             LoginMessage login = (LoginMessage) segment.message;
 
@@ -86,28 +76,33 @@ public class ProcessWorker implements Runnable {
                 System.err.println("Incorrect password length");
                 return;
             }
+            LoginResponse r = new LoginResponse();
+            r.token = createNewToken(login.username, salt(login.password));
+            r.successful = r.token != null;
+            response = r;
+        }
 
+        if (segment.message instanceof CreateGroupMessage) {
+            CreateGroupMessage createGroup = (CreateGroupMessage) segment.message;
+
+            CreateGroupResponse r = new CreateGroupResponse();
+//INSERT INTO channels (name, owner) VALUES (?, (SELECT user_id FROM tokens WHERE token = ?)) RETURNING id
             try {
-                PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO tokens (user_id, token, expires) VALUES ((SELECT id FROM users WHERE username = ? AND password = ?), uuid_generate_v4(), now() + interval '1 day') RETURNING token;");
-                stmt.setString(1, login.username);
-                stmt.setBytes(2, salt(login.password));
+                PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO channel_members (user_id, group_id) VALUES ()");
+                stmt.setString(1, createGroup.name);
+                stmt.setString(2, segment.token.toString());
 
-                LoginResponse res = new LoginResponse();
-
-                try {
-                    ResultSet resultSet = stmt.executeQuery();
-                    resultSet.next();
-                    res.successful = true;
-                    res.token = UUID.fromString(resultSet.getString(1));
-                } catch (SQLException ex) {
-                    res.successful = false;
-                    res.token = null;
-                }
-
-                response = res;
+                r.success = stmt.execute();
             } catch (SQLException e) {
+                r.success = false;
                 e.printStackTrace();
             }
+            response = r;
+        }
+
+        if (segment.message instanceof AddUserToGroupMessage) {
+            AddUserToGroupMessage addUser = (AddUserToGroupMessage) segment.message;
+
         }
 
         if (response != null) {
@@ -124,6 +119,20 @@ public class ProcessWorker implements Runnable {
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
+        }
+    }
+
+    private UUID createNewToken(String username, byte[] password) {
+        try {
+            PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO tokens (user_id, token, expires) VALUES ((SELECT id FROM users WHERE username = ? AND password = ?), uuid_generate_v4(), now() + interval '1 day') RETURNING token;");
+            stmt.setString(1, username);
+            stmt.setBytes(2, password);
+
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            return UUID.fromString(resultSet.getString(1));
+        } catch (Exception ex) {
+            return null;
         }
     }
 

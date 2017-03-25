@@ -21,7 +21,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException, SQLException {
         DatagramChannel channel = DatagramChannel.open(StandardProtocolFamily.INET);
-        channel.bind(new InetSocketAddress(InetAddress.getLocalHost(), MAIN_SERVER_PORT));
+        channel.bind(new InetSocketAddress(InetAddress.getByName("192.168.0.100"), MAIN_SERVER_PORT));
         channel.configureBlocking(false);
 
         ExecutorService executorService = Executors.newFixedThreadPool(4);
@@ -49,6 +49,7 @@ public class Main {
             if (key.isWritable()) {
                 while (!server.outgoingQueue.isEmpty()) {
                     Outgoing outgoing = server.outgoingQueue.poll();
+                    System.out.println("SENDING RESPONSE");
                     channel.send(outgoing.response, outgoing.respondTo);
                 }
             }
