@@ -21,7 +21,7 @@ subprojects {
     }
 }
 
-project(":MainServer") {
+project(":Common") {
     sourceCompatibility = 1.7
 }
 
