@@ -1,12 +1,7 @@
 package zse.hackathon2017;
 
-import zse.hackathon2017.messages.AddUserToGroupMessage;
-import zse.hackathon2017.messages.CreateGroupMessage;
-import zse.hackathon2017.messages.LoginMessage;
-import zse.hackathon2017.messages.RegisterMessage;
-import zse.hackathon2017.responses.CreateGroupResponse;
-import zse.hackathon2017.responses.LoginResponse;
-import zse.hackathon2017.responses.RegisterResponse;
+import zse.hackathon2017.messages.*;
+import zse.hackathon2017.responses.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -15,9 +10,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.UUID;
 
 /**
@@ -42,38 +35,34 @@ public class ProcessWorker implements Runnable {
         if (segment.message instanceof RegisterMessage) {
             RegisterMessage register = (RegisterMessage) segment.message;
 
+            RegisterResponse r = new RegisterResponse();
             if (register.password.length != 32) {
                 System.err.println("Incorrect password length");
-                return;
-            }
-
-            final byte[] salted = salt(register.password);
-            try {
-                PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO users (username, password) VALUES (?, ?)");
-                stmt.setString(1, register.username);
-                stmt.setBytes(2, salted);
-                stmt.execute();
-
-                RegisterResponse r = new RegisterResponse();
-                r = new RegisterResponse();
-                r.token = createNewToken(register.username, salted);
-                r.successful = r.token != null;
-                response = r;
-            } catch (Exception e) {
-                e.printStackTrace();
-                RegisterResponse r = new RegisterResponse();
-                r = new RegisterResponse();
-                r.token = null;
                 r.successful = false;
-                response = r;
+            } else {
+                final byte[] salted = salt(register.password);
+                try {
+                    PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO users (username, password) VALUES (?, ?)");
+                    stmt.setString(1, register.username);
+                    stmt.setBytes(2, salted);
+                    stmt.execute();
+
+                    r.token = createNewToken(register.username, salted);
+                    r.successful = r.token != null;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    r.token = null;
+                    r.successful = false;
+                }
             }
+            response = r;
         }
 
         if (segment.message instanceof LoginMessage) {
             LoginMessage login = (LoginMessage) segment.message;
 
             if (login.password.length != 32) {
-                System.err.println("Incorrect password length");
+                System.err.println("Incorrect password length  " + login.password.length);
                 return;
             }
             LoginResponse r = new LoginResponse();
@@ -88,12 +77,33 @@ public class ProcessWorker implements Runnable {
             CreateGroupResponse r = new CreateGroupResponse();
 //
             try {
-                PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO channel_members (user_id, group_id) VALUES ((SELECT user_id FROM tokens WHERE token = ?), (INSERT INTO channels (name, owner) VALUES (?, (SELECT user_id FROM tokens WHERE token = ?)) RETURNING id));");
-                stmt.setString(1, segment.token.toString());
+                PreparedStatement stmt = server.dbConn.prepareStatement(
+                        "WITH uid AS (\n" +
+                                "    SELECT user_id \n" +
+                                "    FROM tokens \n" +
+                                "    WHERE token = ?\n" +
+                                "), gid AS (\n" +
+                                "    INSERT INTO channels (name, owner) \n" +
+                                "    VALUES (\n" +
+                                "        ?, \n" +
+                                "        (\n" +
+                                "            SELECT user_id \n" +
+                                "            FROM tokens \n" +
+                                "            WHERE token = ?\n" +
+                                "        )\n" +
+                                "    ) RETURNING id\n" +
+                                ")\n" +
+                                "\n" +
+                                "INSERT INTO channel_members (user_id, group_id) \n" +
+                                "VALUES ((SELECT * FROM uid), (SELECT * FROM gid));"
+                );
+                String uuid = segment.token.toString();
+                System.out.println(uuid);
+                stmt.setObject(1, uuid, Types.OTHER);
                 stmt.setString(2, createGroup.name);
-                stmt.setString(3, segment.token.toString());
+                stmt.setObject(3, uuid, Types.OTHER);
 
-                r.success = stmt.execute();
+                r.success = stmt.executeUpdate() == 1;
             } catch (SQLException e) {
                 r.success = false;
                 e.printStackTrace();
@@ -101,9 +111,36 @@ public class ProcessWorker implements Runnable {
             response = r;
         }
 
-        if (segment.message instanceof AddUserToGroupMessage) {
-            AddUserToGroupMessage addUser = (AddUserToGroupMessage) segment.message;
+        if (segment.message instanceof AddUserToChannelMessage) {
+            AddUserToChannelMessage addUser = (AddUserToChannelMessage) segment.message;
 
+            AddChannelToGroupResponse r = new AddChannelToGroupResponse();
+
+            try {
+                PreparedStatement stmt = server.dbConn.prepareStatement(
+                        "INSERT INTO channel_members (user_id, group_id) " +
+                            "VALUES ((SELECT id FROM users WHERE username = ?), (SELECT id FROM channels WHERE name = ?));"
+                );
+                stmt.setString(1, addUser.username);
+                stmt.setString(2, addUser.channelName);
+                r.success = stmt.executeUpdate() == 1;
+            } catch (SQLException e) {
+                r.success = false;
+                e.printStackTrace();
+            }
+
+        }
+
+        if (segment.message instanceof GetUserChannelsMessage) {
+            try {
+                PreparedStatement stmt = server.dbConn.prepareStatement("SELECT name FROM channels INNER JOIN channel_members ON id = group_id WHERE user_id = (SELECT user_id FROM tokens WHERE token = ?);");
+                stmt.setObject(1, segment.token.toString(), Types.OTHER);
+
+                GetUserChannelsResponse 
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
 
         if (response != null) {
@@ -125,7 +162,11 @@ public class ProcessWorker implements Runnable {
 
     private UUID createNewToken(String username, byte[] password) {
         try {
-            PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO tokens (user_id, token, expires) VALUES ((SELECT id FROM users WHERE username = ? AND password = ?), uuid_generate_v4(), now() + interval '1 day') RETURNING token;");
+            PreparedStatement stmt = server.dbConn.prepareStatement(
+                    "INSERT INTO tokens (user_id, token, expires) " +
+                        "VALUES ((SELECT id FROM users WHERE username = ? AND password = ?), uuid_generate_v4(), now() + interval '1 day') " +
+                        "RETURNING token;"
+            );
             stmt.setString(1, username);
             stmt.setBytes(2, password);
 

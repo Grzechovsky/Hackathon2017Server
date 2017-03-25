@@ -49,7 +49,6 @@ public class ReceiveWorker implements Runnable {
             Segment seg = (Segment) o;
             server.processThreads.submit(new ProcessWorker(server, seg, addr));
 
-
         } catch (Exception ex) {
             ex.printStackTrace();
         }

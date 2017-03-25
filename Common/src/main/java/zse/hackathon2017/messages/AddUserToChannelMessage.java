@@ -5,7 +5,7 @@ import zse.hackathon2017.Message;
 /**
  * Created by Grzechu on 25.03.2017.
  */
-public class AddUserToGroupMessage implements Message {
+public class AddUserToChannelMessage implements Message {
     public String username;
-    public long groupId;
+    public String channelName;
 }
