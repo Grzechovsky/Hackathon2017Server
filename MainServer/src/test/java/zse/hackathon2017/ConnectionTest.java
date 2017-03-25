@@ -3,10 +3,9 @@ package zse.hackathon2017;
 import org.junit.Test;
 import zse.hackathon2017.messages.LoginMessage;
 import zse.hackathon2017.messages.RegisterMessage;
+import zse.hackathon2017.responses.LoginResponse;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -18,7 +17,7 @@ import java.util.UUID;
 public class ConnectionTest {
 
     @Test
-    public void udpTest() throws IOException, NoSuchAlgorithmException {
+    public void udpTest() throws IOException, NoSuchAlgorithmException, ClassNotFoundException {
         DatagramSocket socket = new DatagramSocket();
         socket.connect(InetAddress.getLocalHost(), Main.MAIN_SERVER_PORT);
 
@@ -42,6 +41,23 @@ public class ConnectionTest {
         out.writeObject(segment);
 
         socket.send(new DatagramPacket(array.toByteArray(), array.size()));
+
+        DatagramPacket packet = new DatagramPacket(new byte[4096], 4096);
+        socket.receive(packet);
+
+        ByteArrayInputStream input = new ByteArrayInputStream(packet.getData());
+        ObjectInputStream in = new ObjectInputStream(input);
+        Object o = in.readObject();
+
+        if (!(o instanceof Response)) {
+            throw new RuntimeException();
+        }
+
+        if (o instanceof LoginResponse) {
+            System.out.println(((LoginResponse) o).successful);
+            System.out.println(((LoginResponse) o).token);
+        }
+
     }
 
 }

@@ -119,6 +119,8 @@ public class ProcessWorker implements Runnable {
                 Outgoing outgoing = new Outgoing();
                 outgoing.respondTo = respondTo;
                 outgoing.response = ByteBuffer.wrap(buff.toByteArray());
+
+                server.outgoingQueue.add(outgoing);
             } catch (IOException ex) {
                 ex.printStackTrace();
             }

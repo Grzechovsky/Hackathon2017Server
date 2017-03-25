@@ -36,7 +36,7 @@ public class Main {
         server.dbConn = dbConn;
 
         Selector selector = Selector.open();
-        SelectionKey key = channel.register(selector, SelectionKey.OP_READ);
+        SelectionKey key = channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
         key.attach(server);
 
         while (selector.isOpen()) {
@@ -44,10 +44,6 @@ public class Main {
 
             if (key.isReadable()) {
                 executorService.submit(new ReceiveWorker(key));
-            }
-
-            if (!server.outgoingQueue.isEmpty()) {
-                key = channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
             }
 
             if (key.isWritable()) {
