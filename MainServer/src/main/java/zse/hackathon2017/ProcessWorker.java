@@ -15,9 +15,7 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.*;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Created by Grzechu on 25.03.2017.
@@ -196,7 +194,7 @@ public class ProcessWorker implements Runnable {
 
             try {
                 ServerSocket serverSocket = new ServerSocket(0);
-                server.transerThreads.submit(new ReceiveImageWorker(server, serverSocket, segment.token, addImage.channelName));
+                server.transerThreads.submit(new AddImageWorker(server, serverSocket, segment.token, addImage.channelName));
                 r.socketAddress = new InetSocketAddress("192.168.0.100", serverSocket.getLocalPort());
             } catch (IOException e) {
                 r.socketAddress = null;
@@ -207,7 +205,19 @@ public class ProcessWorker implements Runnable {
         }
 
         if (segment.message instanceof GetImageMessage) {
-            
+            GetImageMessage getImage = (GetImageMessage) segment.message;
+            GetImageResponse r = new GetImageResponse();
+
+            try {
+                ServerSocket serverSocket = new ServerSocket(0);
+                server.transerThreads.submit(new GetImageWorker(server, serverSocket, segment.token, getImage.imageId));
+                r.socketAddress = new InetSocketAddress("192.168.0.100", serverSocket.getLocalPort());
+            } catch (IOException e) {
+                r.socketAddress = null;
+                e.printStackTrace();
+            }
+
+            response = r;
         }
 
         if (response != null) {

@@ -16,14 +16,14 @@ import java.util.UUID;
 /**
  * Created by Grzechu on 25.03.2017.
  */
-public class ReceiveImageWorker implements Runnable {
+public class AddImageWorker implements Runnable {
 
     private Server server;
     private ServerSocket listener;
     private UUID token;
     private String channelName;
 
-    public ReceiveImageWorker(Server server, ServerSocket listener, UUID token, String channelName) {
+    public AddImageWorker(Server server, ServerSocket listener, UUID token, String channelName) {
         this.server = server;
         this.listener = listener;
         this.token = token;
@@ -32,8 +32,11 @@ public class ReceiveImageWorker implements Runnable {
 
     @Override
     public void run() {
+        Socket socket = null;
         try {
-            Socket socket = listener.accept();
+            System.out.println("LISTENING FOR SENDER");
+            socket = listener.accept();
+            System.out.println("GOT SENDER");
             InputStream input = socket.getInputStream();
 
 //            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -60,6 +63,15 @@ public class ReceiveImageWorker implements Runnable {
             }
         } catch (IOException | SQLException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                if (socket != null) {
+                    socket.close();
+                }
+                listener.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
