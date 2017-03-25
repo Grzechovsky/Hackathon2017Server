@@ -11,6 +11,8 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
 /**
@@ -71,10 +73,10 @@ public class ProcessWorker implements Runnable {
             response = r;
         }
 
-        if (segment.message instanceof CreateGroupMessage) {
-            CreateGroupMessage createGroup = (CreateGroupMessage) segment.message;
+        if (segment.message instanceof CreateChannelMessage) {
+            CreateChannelMessage createGroup = (CreateChannelMessage) segment.message;
 
-            CreateGroupResponse r = new CreateGroupResponse();
+            CreateChannelResponse r = new CreateChannelResponse();
 //
             try {
                 PreparedStatement stmt = server.dbConn.prepareStatement(
@@ -132,15 +134,23 @@ public class ProcessWorker implements Runnable {
         }
 
         if (segment.message instanceof GetUserChannelsMessage) {
+            GetUserChannelsResponse r = new GetUserChannelsResponse();
             try {
                 PreparedStatement stmt = server.dbConn.prepareStatement("SELECT name FROM channels INNER JOIN channel_members ON id = group_id WHERE user_id = (SELECT user_id FROM tokens WHERE token = ?);");
                 stmt.setObject(1, segment.token.toString(), Types.OTHER);
 
-                GetUserChannelsResponse 
+                ResultSet resultSet = stmt.executeQuery();
+                Set<String> set = new TreeSet<>();
 
+                while(resultSet.next()) {
+                     set.add(resultSet.getString(1));
+                }
+
+                r.channelNames = set.toArray(new String[set.size()]);
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+            response = r;
         }
 
         if (response != null) {

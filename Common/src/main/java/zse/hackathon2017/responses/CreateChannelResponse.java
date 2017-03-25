@@ -6,6 +6,6 @@ import zse.hackathon2017.Response;
 /**
  * Created by Grzechu on 25.03.2017.
  */
-public class CreateGroupResponse implements Response {
+public class CreateChannelResponse implements Response {
     public boolean success;
 }

@@ -2,18 +2,16 @@ package zse.hackathon2017;
 
 import org.junit.Assert;
 import org.junit.Test;
-import zse.hackathon2017.messages.CreateGroupMessage;
+import zse.hackathon2017.messages.GetUserChannelsMessage;
 import zse.hackathon2017.messages.LoginMessage;
-import zse.hackathon2017.messages.RegisterMessage;
-import zse.hackathon2017.responses.CreateGroupResponse;
+import zse.hackathon2017.responses.GetUserChannelsResponse;
 import zse.hackathon2017.responses.LoginResponse;
-import zse.hackathon2017.responses.RegisterResponse;
 
 import java.io.*;
 import java.net.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.UUID;
+import java.util.Arrays;
 
 /**
  * Created by Grzechu on 25.03.2017.
@@ -54,14 +52,21 @@ public class ConnectionTest {
         segment.token = loginResponse.token;
         Assert.assertTrue(loginResponse.successful);
 
-        CreateGroupMessage createGroup = new CreateGroupMessage();
-        createGroup.name = "test_group2";
-        segment.message = createGroup;
-
+        GetUserChannelsMessage groups = new GetUserChannelsMessage();
+        segment.message = groups;
         send(socket, segment);
 
-        CreateGroupResponse createGroupResponse = (CreateGroupResponse) receive(socket);
-        assert createGroupResponse.success;
+        GetUserChannelsResponse getUserChannelsResponse = (GetUserChannelsResponse) receive(socket);
+        System.out.println(Arrays.toString(getUserChannelsResponse.channelNames));
+
+//        CreateChannelMessage createGroup = new CreateChannelMessage();
+//        createGroup.name = "test_group";
+//        segment.message = createGroup;
+//
+//        send(socket, segment);
+//
+//        CreateChannelResponse createGroupResponse = (CreateChannelResponse) receive(socket);
+//        assert createGroupResponse.success;
 
 
     }
