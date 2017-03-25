@@ -11,9 +11,11 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Created by Grzechu on 25.03.2017.
@@ -140,7 +142,7 @@ public class ProcessWorker implements Runnable {
                 stmt.setObject(1, segment.token.toString(), Types.OTHER);
 
                 ResultSet resultSet = stmt.executeQuery();
-                Set<String> set = new TreeSet<>();
+                Set<String> set = new HashSet<>();
 
                 while(resultSet.next()) {
                      set.add(resultSet.getString(1));
@@ -150,6 +152,39 @@ public class ProcessWorker implements Runnable {
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+            response = r;
+        }
+
+        if (segment.message instanceof GetChannelImagesMessage) {
+            GetChannelImagesMessage getChannelImages = (GetChannelImagesMessage) segment.message;
+            GetChannelImagesResponse r = new GetChannelImagesResponse();
+
+            try {
+                PreparedStatement stmt = server.dbConn.prepareStatement(
+                        "SELECT id " +
+                            "FROM images " +
+                            "WHERE channel_id = (" +
+                                "SELECT id " +
+                                "FROM channels " +
+                                "WHERE name = ?" +
+                            ") " +
+                            "ORDER BY id DESC;"
+                );
+                stmt.setString(1, getChannelImages.channelName);
+
+                ResultSet resultSet = stmt.executeQuery();
+                Set<Integer> ids = new HashSet<>();
+
+                while (resultSet.next()) {
+                    ids.add(resultSet.getInt(1));
+                }
+
+                r.imageIds = ids.stream().mapToInt(Integer::intValue).toArray();
+            } catch (SQLException e) {
+                r.imageIds = null;
+                e.printStackTrace();
+            }
+
             response = r;
         }
 
