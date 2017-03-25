@@ -22,6 +22,10 @@ subprojects {
 }
 
 project(":MainServer") {
+    sourceCompatibility = 1.7
+}
+
+project(":MainServer") {
     dependencies {
         compile project(":Common")
     }

@@ -86,11 +86,12 @@ public class ProcessWorker implements Runnable {
             CreateGroupMessage createGroup = (CreateGroupMessage) segment.message;
 
             CreateGroupResponse r = new CreateGroupResponse();
-//INSERT INTO channels (name, owner) VALUES (?, (SELECT user_id FROM tokens WHERE token = ?)) RETURNING id
+//
             try {
-                PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO channel_members (user_id, group_id) VALUES ()");
-                stmt.setString(1, createGroup.name);
-                stmt.setString(2, segment.token.toString());
+                PreparedStatement stmt = server.dbConn.prepareStatement("INSERT INTO channel_members (user_id, group_id) VALUES ((SELECT user_id FROM tokens WHERE token = ?), (INSERT INTO channels (name, owner) VALUES (?, (SELECT user_id FROM tokens WHERE token = ?)) RETURNING id));");
+                stmt.setString(1, segment.token.toString());
+                stmt.setString(2, createGroup.name);
+                stmt.setString(3, segment.token.toString());
 
                 r.success = stmt.execute();
             } catch (SQLException e) {

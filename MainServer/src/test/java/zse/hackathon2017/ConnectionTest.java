@@ -17,6 +17,8 @@ import java.util.UUID;
  */
 public class ConnectionTest {
 
+
+
     @Test
     public void udpTest() throws IOException, NoSuchAlgorithmException, ClassNotFoundException {
         DatagramSocket socket = new DatagramSocket();
@@ -37,11 +39,7 @@ public class ConnectionTest {
         loginMessage.password = digest;
         segment.message = loginMessage;
 
-        ByteArrayOutputStream array = new ByteArrayOutputStream();
-        ObjectOutputStream out = new ObjectOutputStream(array);
-        out.writeObject(segment);
-
-        socket.send(new DatagramPacket(array.toByteArray(), array.size()));
+        send(socket, segment);
 
         DatagramPacket packet = new DatagramPacket(new byte[4096], 4096);
         socket.receive(packet);
@@ -59,6 +57,13 @@ public class ConnectionTest {
             System.out.println(((RegisterResponse) o).token);
         }
 
+    }
+
+    private void send(DatagramSocket socket, Segment segment) throws IOException {
+        ByteArrayOutputStream array = new ByteArrayOutputStream();
+        ObjectOutputStream out = new ObjectOutputStream(array);
+        out.writeObject(segment);
+        socket.send(new DatagramPacket(array.toByteArray(), array.size()));
     }
 
 }
