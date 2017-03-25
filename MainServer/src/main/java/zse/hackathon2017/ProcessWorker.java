@@ -138,7 +138,13 @@ public class ProcessWorker implements Runnable {
         if (segment.message instanceof GetUserChannelsMessage) {
             GetUserChannelsResponse r = new GetUserChannelsResponse();
             try {
-                PreparedStatement stmt = server.dbConn.prepareStatement("SELECT name FROM channels INNER JOIN channel_members ON id = channel_id WHERE user_id = (SELECT user_id FROM tokens WHERE token = ?);");
+                PreparedStatement stmt = server.dbConn.prepareStatement(
+                        "SELECT name " +
+                            "FROM channels " +
+                            "INNER JOIN channel_members " +
+                            "ON id = channel_id " +
+                            "WHERE user_id = (SELECT user_id FROM tokens WHERE token = ?);"
+                );
                 stmt.setObject(1, segment.token.toString(), Types.OTHER);
 
                 ResultSet resultSet = stmt.executeQuery();
@@ -161,7 +167,7 @@ public class ProcessWorker implements Runnable {
 
             try {
                 PreparedStatement stmt = server.dbConn.prepareStatement(
-                        "SELECT id " +
+                        "SELECT id" +
                             "FROM images " +
                             "WHERE channel_id = (" +
                                 "SELECT id " +
